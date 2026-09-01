@@ -17,7 +17,7 @@ client = OpenAI(
     base_url="http://localhost:11434/v1",
     api_key="ollama",
 )
-OLLAMA_MODEL = "qwen2.5-coder:0.5b"
+OLLAMA_MODEL = "gemma2:9b"
 
 
 @app.route('/')
@@ -52,6 +52,8 @@ def send_api():
                 {"role": "user", "content": received_text}
             ],
             model=OLLAMA_MODEL,
+            # 既定値(0.8)では英語・スペイン語が混入するため下げている
+            temperature=0.3,
         )
 
         if chat_completion.choices and chat_completion.choices[0].message:
@@ -67,4 +69,5 @@ def send_api():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    # macOS では AirPlay Receiver がポート 5000 を占有するため 5001 を使用
+    app.run(debug=True, host='0.0.0.0', port=5001)
