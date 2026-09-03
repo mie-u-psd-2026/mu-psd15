@@ -126,6 +126,23 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
 .score-num { font-family: var(--mono); font-size: 13px; text-align: right; }
 .slip-note { border-top: 1px solid #D5DCE6; margin-top: 16px; padding-top: 14px; font-size: 14px; }
 
+/* ---- 振り返り ---- */
+.chart { width: 100%; height: 80px; display: block; }
+.chart-note { display: flex; justify-content: space-between; font-family: var(--mono);
+  font-size: 10px; color: var(--mist); margin-top: 8px; }
+.turns { list-style: none; margin: 14px 0 0; padding: 0; }
+.turn-row { display: grid; grid-template-columns: 1.6rem 3rem 1fr; gap: 12px;
+  align-items: baseline; padding: 10px 0; border-top: 1px solid var(--line); }
+.turn-no { font-family: var(--mono); font-size: 11px; color: var(--mist); }
+.turn-delta { font-family: var(--mono); font-size: 13px; text-align: right; color: var(--mist); }
+.delta-good { color: var(--jade); }
+.delta-bad { color: var(--ember); }
+.turn-text { font-size: 14px; }
+.turn-tag { display: inline-block; font-style: normal; font-family: var(--mono); font-size: 10px;
+  letter-spacing: .08em; padding: 2px 7px; border-radius: 2px; margin-left: 8px; white-space: nowrap; }
+.tag-good { background: var(--jade); color: var(--ink); }
+.tag-bad { background: var(--ember); color: var(--ink); }
+
 .head-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
 .case-tag { font-family: var(--mono); font-size: 11px; color: var(--mist); }
 
@@ -260,6 +277,41 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
     <p class="slip-note">{{ review.comment }}</p>
   </div>
 
+  <template v-if="myTurns.length">
+    <hr class="rule">
+    <p class="eyebrow">対応の振り返り</p>
+
+    <div class="panel">
+      <svg class="chart" viewBox="0 0 300 80" preserveAspectRatio="none" role="img"
+           :aria-label="'怒りの推移。' + anger + 'で終了'">
+        <line x1="0" y1="61" x2="300" y2="61" stroke="var(--line)" stroke-width="1"/>
+        <polyline :points="angerLine" fill="none" stroke="var(--amber)" stroke-width="2"
+                  vector-effect="non-scaling-stroke"/>
+        <circle v-for="(p, i) in angerPoints" :key="i" :cx="p.x" :cy="p.y" r="2.5"
+                :fill="p.v <= 30 ? 'var(--jade)' : p.v <= 70 ? 'var(--amber)' : 'var(--ember)'"/>
+      </svg>
+      <div class="chart-note">
+        <span>開始 {{ angerPoints.length ? angerPoints[0].v : '-' }}</span>
+        <span>目標 {{ goalAnger }} 以下(細い線)</span>
+        <span>終了 {{ anger }}</span>
+      </div>
+    </div>
+
+    <ol class="turns">
+      <li v-for="t in myTurns" :key="t.no" class="turn-row">
+        <span class="turn-no">{{ t.no }}</span>
+        <span class="turn-delta" :class="t.delta < 0 ? 'delta-good' : t.delta > 0 ? 'delta-bad' : ''">
+          {{ t.delta > 0 ? '+' : '' }}{{ t.delta }}
+        </span>
+        <span class="turn-text">
+          {{ t.text }}
+          <em v-if="bestTurn && t.no === bestTurn.no" class="turn-tag tag-good">いちばん効いた一言</em>
+          <em v-if="worstTurn && t.no === worstTurn.no" class="turn-tag tag-bad">いちばん怒らせた一言</em>
+        </span>
+      </li>
+    </ol>
+  </template>
+
   <div style="text-align:right; margin-top:24px">
     <button class="btn-main" @click="reset">別の事例で練習する</button>
   </div>
@@ -323,6 +375,35 @@ createApp({
       const control = (78 - this.anger * 0.22).toFixed(1);
       return `M 36 68 Q 50 ${control} 64 68`;
     },
+
+    /** 自分の返答だけを、怒りを動かした量つきで並べる */
+    myTurns() {
+      return this.messages
+        .filter(m => m.role === 'staff')
+        .map((m, i) => ({ no: i + 1, text: m.text, delta: m.delta ?? 0 }));
+    },
+    /** いちばん怒りを下げた返答。同点なら先に出たほう */
+    bestTurn() {
+      const lowered = this.myTurns.filter(t => t.delta < 0);
+      return lowered.length ? lowered.reduce((a, b) => (b.delta < a.delta ? b : a)) : null;
+    },
+    /** いちばん怒らせた返答 */
+    worstTurn() {
+      const raised = this.myTurns.filter(t => t.delta > 0);
+      return raised.length ? raised.reduce((a, b) => (b.delta > a.delta ? b : a)) : null;
+    },
+    /** 怒りの推移を折れ線にする */
+    angerLine() {
+      const points = this.messages.filter(m => m.anger !== undefined).map(m => m.anger);
+      if (points.length < 2) return '';
+      const stepX = 300 / (points.length - 1);
+      return points.map((v, i) => `${(i * stepX).toFixed(1)},${(70 - v * 0.6).toFixed(1)}`).join(' ');
+    },
+    angerPoints() {
+      const points = this.messages.filter(m => m.anger !== undefined).map(m => m.anger);
+      const stepX = points.length > 1 ? 300 / (points.length - 1) : 0;
+      return points.map((v, i) => ({ x: (i * stepX).toFixed(1), y: (70 - v * 0.6).toFixed(1), v }));
+    },
   },
   watch: {
     // body は Vue の管理範囲外なので、CSS変数を直接書き換えて背景の熱を反映する
@@ -356,7 +437,7 @@ createApp({
           { scenario: this.selectedCase, difficulty: this.selectedLevel });
         Object.assign(this, {
           anger: d.anger, turn: d.turn, status: d.status,
-          messages: [{ role: 'customer', text: d.message }],
+          messages: [{ role: 'customer', text: d.message, anger: d.anger }],
           draft: '', review: null, screen: 'talking',
         });
       } catch (e) { this.trouble = e.message; } finally { this.busy = false; }
@@ -372,8 +453,9 @@ createApp({
           anger: this.anger, turn: this.turn, messages: this.messages, reply,
         });
         // 送信が成功してから履歴に積む。失敗しても入力を消さないための順序
-        this.messages.push({ role: 'staff', text: reply });
-        this.messages.push({ role: 'customer', text: d.message });
+        // 返答が怒りをいくつ動かしたかを添える。振り返りで原因を辿れるようにするため
+        this.messages.push({ role: 'staff', text: reply, delta: d.anger - this.anger });
+        this.messages.push({ role: 'customer', text: d.message, anger: d.anger });
         this.draft = '';
         Object.assign(this, { anger: d.anger, turn: d.turn, status: d.status });
         this.scrollDown();
