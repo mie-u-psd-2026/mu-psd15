@@ -2,3 +2,7 @@
 __pycache__/
 *.pyc
 .venv/
+
+# 発表資料と開発ガイドは、当面リポジトリに含めない
+docs/
+guide/
