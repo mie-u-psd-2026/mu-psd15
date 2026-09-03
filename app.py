@@ -4,7 +4,9 @@ AIが怒っている顧客を演じ、利用者の応対に応じて怒りレベ
 サーバーは状態を持たず、会話履歴と怒りレベルはリクエストごとに受け取る。
 """
 
+import json
 import re
+import urllib.request
 
 from flask import Flask, jsonify, request, send_from_directory
 from openai import OpenAI
@@ -28,6 +30,11 @@ client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
 OLLAMA_MODEL = "gemma2:9b"
 # 既定値(0.8)では応答に英語・スペイン語が混入したため下げている
 LLM_TEMPERATURE = 0.3
+# Ollamaは既定では5分でモデルを解放する。解放後の初回は読み込みに20秒以上かかり
+# 「5秒以内」の非機能要件を満たせない。これを避けるためモデルを常駐させる。
+# keep_alive はOpenAI互換API側では無視されるため、Ollama純正APIへ直接指定する。
+OLLAMA_NATIVE_CHAT_URL = "http://localhost:11434/api/chat"
+KEEP_MODEL_RESIDENT = -1
 
 # シナリオを増やすときは、この辞書に1件追加するだけで済む
 SCENARIOS = {
@@ -263,6 +270,34 @@ def parse_comment(raw_text: str) -> str:
     return raw_text.strip() or "講評を取得できませんでした。"
 
 
+def warm_up_model() -> None:
+    """起動時にモデルをメモリへ読み込み、以後解放されないようにする。
+
+    最初の利用者だけが20秒以上待たされる状態を避けるための準備処理。
+    AIが起動していなくてもアプリ自体は立ち上がるよう、失敗しても続行する。
+    """
+    payload = {
+        "model": OLLAMA_MODEL,
+        "stream": False,
+        "keep_alive": KEEP_MODEL_RESIDENT,
+        "messages": [{"role": "user", "content": "準備はできましたか"}],
+    }
+    request_body = json.dumps(payload).encode()
+    try:
+        urllib.request.urlopen(
+            urllib.request.Request(
+                OLLAMA_NATIVE_CHAT_URL,
+                data=request_body,
+                headers={"Content-Type": "application/json"},
+            ),
+            timeout=180,
+        ).read()
+        app.logger.info("AIモデルを読み込み、常駐させました。")
+    except Exception as error:
+        app.logger.warning(f"AIモデルの事前読み込みに失敗しました: {error}")
+
+
 if __name__ == "__main__":
+    warm_up_model()
     # macOS では AirPlay Receiver がポート 5000 を占有するため 5001 を使用
     app.run(debug=True, host="0.0.0.0", port=5001)
