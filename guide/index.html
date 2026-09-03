@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>クレトレ 開発ガイド｜実践ソフトウェア開発</title>
+<style>
+:root{
+  --bg:#FBFBFD; --panel:#FFFFFF; --line:#DFE3EA; --sunken:#F0F2F6;
+  --text:#1B2230; --mist:#6B7688;
+  --ember:#C4402A; --amber:#B57B12; --jade:#1F7A56; --blue:#2A5DA8;
+  --gothic:"Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",system-ui,sans-serif;
+  --mincho:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--gothic);line-height:1.8;font-size:15px}
+.wrap{display:grid;grid-template-columns:230px 1fr;max-width:1180px;margin:0 auto;gap:36px;padding:0 22px}
+
+nav{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:28px 0 40px;border-right:1px solid var(--line)}
+nav h1{font-family:var(--mincho);font-size:20px;letter-spacing:.12em;margin:0 0 4px}
+nav .who{font-size:12px;color:var(--mist);margin:0 0 22px}
+nav a{display:block;padding:6px 12px 6px 0;color:var(--mist);text-decoration:none;font-size:13.5px;border-left:2px solid transparent;padding-left:10px}
+nav a:hover{color:var(--text)}
+nav a.on{color:var(--text);border-left-color:var(--ember);font-weight:600}
+nav .grp{font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:#9AA4B4;margin:18px 0 6px;padding-left:10px}
+
+main{padding:34px 0 90px;min-width:0}
+section{scroll-margin-top:24px;margin-bottom:56px}
+h2{font-family:var(--mincho);font-size:28px;margin:0 0 6px}
+.lead{color:var(--mist);margin:0 0 22px}
+h3{font-size:18px;margin:30px 0 10px}
+p{margin:0 0 14px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 2px rgba(27,34,48,.05)}
+.tree{font-family:var(--mono);font-size:13px;line-height:2.0;white-space:pre;overflow-x:auto;background:var(--sunken);border-radius:6px;padding:16px 18px}
+.tree .new{color:var(--ember);font-weight:700}
+.tree .cmt{color:var(--mist)}
+code{font-family:var(--mono);font-size:.88em;background:var(--sunken);padding:2px 6px;border-radius:3px}
+pre{background:var(--sunken);border-radius:6px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.75;margin:0 0 14px}
+
+table{width:100%;border-collapse:collapse;margin:0 0 16px;font-size:14px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;color:var(--mist);font-weight:600;background:var(--sunken)}
+td code{white-space:nowrap}
+
+.tag{display:inline-block;font-family:var(--mono);font-size:10.5px;padding:2px 8px;border-radius:3px;color:#fff;white-space:nowrap}
+.t-new{background:var(--ember)} .t-org{background:var(--mist)} .t-ok{background:var(--jade)} .t-doc{background:var(--blue)}
+
+.day{border-left:3px solid var(--line);padding-left:18px;margin-bottom:26px}
+.day.done{border-left-color:var(--jade)}
+.day h4{margin:0 0 2px;font-size:16px}
+.day .when{font-family:var(--mono);font-size:11px;color:var(--mist)}
+.day ul{margin:8px 0 0;padding-left:20px}
+.day li{margin-bottom:3px}
+
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:860px){.wrap{grid-template-columns:1fr}nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav>
+  <h1>クレトレ 開発ガイド</h1>
+  <p class="who">実践ソフトウェア開発／チーム15<br>中川 颯都</p>
+  <div class="grp">ファイル</div>
+  <a href="#overview">このガイドについて</a>
+  <a href="#tree">いまのファイル構成</a>
+  <a href="#initial">配布された初期構成</a>
+  <a href="#files">ファイルごとの役割</a>
+  <a href="#flow">動く仕組み</a>
+  <div class="grp">講義</div>
+  <a href="#day1">Day1 ガイダンス・環境</a>
+  <a href="#day2">Day2 要件定義・PM</a>
+  <a href="#day3">Day3 設計</a>
+  <a href="#day4">Day4 開発・Git</a>
+  <a href="#day5">Day5 以降</a>
+  <div class="grp">操作</div>
+  <a href="#run">アプリの起動方法</a>
+  <a href="#git">Gitの使い方</a>
+</nav>
+
+<main>
+
+<section id="overview">
+  <h2>このガイドについて</h2>
+  <p class="lead">どのファイルが何をしているか、講義で何を学んだかを一箇所にまとめたページです。</p>
+  <div class="card">
+    <p style="margin:0">アプリは <strong>クレトレ</strong>(クレーム対応トレーニング)。AIが怒った顧客を演じ、利用者は店員として応対します。応対の良し悪しが<strong>怒りの数値</strong>として動き、終了後にAIが講評します。</p>
+  </div>
+  <table>
+    <tr><th>項目</th><th>内容</th></tr>
+    <tr><td>使う言語</td><td>Python(サーバー側)／ HTML・CSS・JavaScript(画面側)</td></tr>
+    <tr><td>使う道具</td><td>Flask(サーバー)、Vue.js(画面)、Ollama(AI)</td></tr>
+    <tr><td>AIモデル</td><td><code>gemma2:9b</code>(パソコンの中で動く。ネット不要)</td></tr>
+    <tr><td>アクセス先</td><td><code>http://localhost:5001</code></td></tr>
+  </table>
+</section>
+
+<section id="tree">
+  <h2>いまのファイル構成</h2>
+  <p class="lead"><span class="tag t-new">赤</span> が自分で追加したもの、灰色は最初から配布されていたものです。</p>
+  <div class="tree">mu-psd15/
+├── <span class="cmt">app.py                        サーバー本体。3つのAPIの窓口</span>
+├── <span class="cmt">requirements.txt              必要なライブラリの一覧</span>
+├── <span class="cmt">.gitignore                    Gitで管理しないファイルの指定</span>
+├── <span class="cmt">readme.md                     配布時の説明書</span>
+├── <span class="cmt">design-document.md            要件定義書 + 基本設計書(提出物)</span>
+├── <span class="cmt">test-spec.md                  テスト仕様書(提出物)</span>
+├── <span class="new">wbs.md                        作業計画とスケジュール(提出物)</span>
+├── static/
+│   ├── <span class="cmt">index.html                画面のすべて(HTML + CSS + Vue)</span>
+│   └── <span class="new">vendor/</span>
+│       └── <span class="new">vue.global.prod.js    Vue本体。ネットなしで動かすため手元に置いた</span>
+├── <span class="new">docs/</span>
+│   ├── <span class="new">発表資料_クレトレ.pptx    成果発表のスライド</span>
+│   └── <span class="new">generate-slides.js        スライドを組み立てるプログラム</span>
+└── <span class="new">guide/</span>
+    └── <span class="new">index.html                このページ</span>
+</div>
+  <div class="card">
+    <strong>自動で作られて、Gitには入れないもの</strong>
+    <table style="margin-top:10px;margin-bottom:0">
+      <tr><td><code>.venv/</code></td><td>Pythonのライブラリ置き場。<code>pip install</code> で作られる</td></tr>
+      <tr><td><code>__pycache__/</code></td><td>Pythonが自動で作る中間ファイル</td></tr>
+      <tr><td><code>.env</code></td><td>APIキーなど秘密の情報。今回は未使用</td></tr>
+    </table>
+  </div>
+</section>
+
+<section id="initial">
+  <h2>配布された初期構成</h2>
+  <p class="lead">GitHubからクローンした直後は、この7ファイルだけでした。</p>
+  <div class="tree">mu-psd15/
+├── app.py              <span class="cmt">40行ほど。テキストを1つ送ってAIの返事を表示するだけ</span>
+├── requirements.txt    <span class="cmt">Flask、openai など24個</span>
+├── .gitignore          <span class="cmt">中身は「.env」の1行だけ</span>
+├── readme.md           <span class="cmt">環境構築の手順</span>
+├── design-document.md  <span class="cmt">空の要件定義テンプレート</span>
+├── test-spec.md        <span class="cmt">空のテストテンプレート</span>
+└── static/
+    └── index.html      <span class="cmt">80行ほど。入力欄と「実行」「関西弁で実行」の2ボタン</span>
+</div>
+  <h3>最初から入っていたひな型は何ができたか</h3>
+  <p>テキストを1つ入力して送ると、AIが返事を返すだけの最小のアプリでした。「関西弁で実行」ボタンは、<strong>AIへの指示文を差し替えると応答が変わる</strong>ことを示す見本です。この仕組みが、クレトレの「顧客を演じさせる」土台になっています。</p>
+  <h3>初期状態から変わったところ</h3>
+  <table>
+    <tr><th>ファイル</th><th>初期</th><th>いま</th></tr>
+    <tr><td><code>app.py</code></td><td>40行／API 1本</td><td>324行／API 3本</td></tr>
+    <tr><td><code>static/index.html</code></td><td>80行／画面1つ</td><td>493行／画面3つ</td></tr>
+    <tr><td><code>design-document.md</code></td><td>テンプレート</td><td>要件定義 + 基本設計</td></tr>
+    <tr><td><code>test-spec.md</code></td><td>テンプレート</td><td>テスト40項目と実施結果</td></tr>
+  </table>
+</section>
+
+<section id="files">
+  <h2>ファイルごとの役割</h2>
+  <p class="lead">中身を知らなくても、どこに何が書いてあるかが分かるようにしています。</p>
+
+  <h3><code>app.py</code> — サーバー側 <span class="tag t-org">配布</span></h3>
+  <p>ブラウザからのお願いを受け取り、AIに問い合わせて、結果を返します。大きく4つのまとまりでできています。</p>
+  <table>
+    <tr><th>行のあたり</th><th>まとまり</th><th>やっていること</th></tr>
+    <tr><td>1〜70</td><td>設定</td><td>使うAIの名前、3つの事例の定義、怒りの上限や目標値</td></tr>
+    <tr><td>70〜150</td><td>小さな部品</td><td>AIへの問い合わせ、返答の読み取り、終了判定</td></tr>
+    <tr><td>150〜260</td><td>3つのAPI</td><td>ブラウザからのお願いを受ける窓口</td></tr>
+    <tr><td>260〜324</td><td>起動処理</td><td>AIを温めてからサーバーを立ち上げる</td></tr>
+  </table>
+  <p>大事な数値はすべて先頭にまとまっています。ここを書き換えるだけで動きが変わります。</p>
+  <pre>RESOLVED_ANGER  = 15   <span style="color:#6B7688">← ここまで下げたら成功</span>
+MAX_TURNS       = 12   <span style="color:#6B7688">← 何回やり取りできるか</span>
+MAX_ANGER_DELTA = 12   <span style="color:#6B7688">← 1回で動く怒りの上限</span></pre>
+
+  <h3><code>static/index.html</code> — 画面側 <span class="tag t-org">配布</span></h3>
+  <p>1つのファイルに、見た目(HTML)・装飾(CSS)・動き(JavaScript)がすべて入っています。ファイルを分けていないのは、規模が小さく、分けるほうが分かりにくくなるためです。</p>
+  <table>
+    <tr><th>場所</th><th>中身</th></tr>
+    <tr><td><code>&lt;style&gt;</code> の中</td><td>色や余白の指定。先頭の <code>:root</code> に色をまとめてある</td></tr>
+    <tr><td><code>&lt;section&gt;</code> ×3</td><td>準備・会話・結果の3画面。<code>v-if</code> で切り替える</td></tr>
+    <tr><td><code>&lt;svg&gt;</code></td><td>お客さんの顔。眉・目・口を怒りの値で動かす</td></tr>
+    <tr><td><code>&lt;script&gt;</code> の中</td><td>データの保持、APIの呼び出し、画面の切り替え</td></tr>
+  </table>
+
+  <h3><code>requirements.txt</code> <span class="tag t-org">配布</span></h3>
+  <p>このアプリが動くのに必要な部品(ライブラリ)の一覧です。<code>pip install -r requirements.txt</code> と打つと、ここに書かれたものが一括で入ります。バージョンまで固定してあるので、誰の環境でも同じものが入ります。</p>
+
+  <h3><code>.gitignore</code> <span class="tag t-org">配布</span></h3>
+  <p>Gitに<strong>入れてはいけないファイル</strong>を書いておく場所です。秘密の情報、自動生成される巨大なフォルダなどを除外します。</p>
+  <pre>.env            <span style="color:#6B7688">← APIキーなど秘密の情報</span>
+__pycache__/    <span style="color:#6B7688">← Pythonの中間ファイル</span>
+*.pyc
+.venv/          <span style="color:#6B7688">← ライブラリ置き場(巨大)</span></pre>
+
+  <h3>提出する3つの書類 <span class="tag t-doc">提出物</span></h3>
+  <table>
+    <tr><th>ファイル</th><th>何を書くか</th><th>いつ書いた</th></tr>
+    <tr><td><code>design-document.md</code></td><td>誰の何を解決するか(要件定義)と、どう作るか(設計)</td><td>Day2・Day3</td></tr>
+    <tr><td><code>wbs.md</code></td><td>作業を分解し、日程と時間を割り当てた計画</td><td>Day2</td></tr>
+    <tr><td><code>test-spec.md</code></td><td>何をどう確かめるか、その結果</td><td>Day4</td></tr>
+  </table>
+</section>
+
+<section id="flow">
+  <h2>動く仕組み</h2>
+  <p class="lead">ボタンを押してから返事が出るまでに何が起きているか。</p>
+  <pre>1. ブラウザ  「返答する」ボタンを押す
+              ↓  POST /api/turns  (会話の履歴と今の怒りの値を送る)
+2. app.py    AIへの指示文を組み立てる
+              ↓
+3. Ollama    顧客のセリフと怒りの値を作る
+              ↓  【怒り】72
+                 【セリフ】返品対応してくれる？
+4. app.py    返答から数値とセリフを取り出す
+             1回で12以上動かないよう制限する
+             終わりかどうか判定する
+              ↓  {"anger":72, "message":"...", "status":"continue"}
+5. ブラウザ  怒りメーターを動かし、セリフを吹き出しで表示</pre>
+  <div class="card">
+    <strong>覚えておく役はブラウザ</strong>
+    <p style="margin:8px 0 0">会話の履歴と怒りの値は<strong>ブラウザが持っています</strong>。サーバーは何も覚えず、毎回まとめて受け取ります。この作りにするとデータベースが要らなくなり、作るものが減ります。</p>
+  </div>
+  <h3>3つのAPIの窓口</h3>
+  <table>
+    <tr><th>窓口</th><th>いつ使う</th><th>返ってくるもの</th></tr>
+    <tr><td><code>POST /api/conversations</code></td><td>練習を始めるとき</td><td>顧客の第一声と初期の怒り</td></tr>
+    <tr><td><code>POST /api/turns</code></td><td>返答を送るたび</td><td>新しい怒りの値と顧客のセリフ</td></tr>
+    <tr><td><code>POST /api/reviews</code></td><td>会話が終わったとき</td><td>3観点の点数と講評</td></tr>
+  </table>
+  <p>名前が動詞ではなく名詞なのは、Day3で学んだRESTの決まりに合わせているためです。</p>
+</section>
+
+<section id="day1">
+  <h2>講義の記録</h2>
+  <p class="lead">毎日の内容と、それが作品のどこに反映されたか。</p>
+  <div class="day done">
+    <span class="when">Day1 ／ 8月31日(月)</span>
+    <h4>ガイダンス・開発環境構築</h4>
+    <ul>
+      <li>10日間で生成AIを使ったWebアプリを作る。評価は<strong>設計書とコミット履歴・完成度・発表</strong>の3つ</li>
+      <li>3層構成(フロント／バック／LLM)の考え方</li>
+      <li>Python・Git・Ollama・VS Code の導入</li>
+      <li>PoC(概念実証)=「本当に作れるか」を先に確かめる</li>
+    </ul>
+    <div class="card" style="margin-top:10px">
+      <strong>作品への反映</strong>
+      <p style="margin:6px 0 0">AIモデルを4種類ためして <code>gemma2:9b</code> を選定。<code>temperature</code> を0.3に下げて外国語の混入を止めた。macOS特有のポート5000問題も、この日に発見して5001へ変更。</p>
+    </div>
+  </div>
+  <div class="day done" id="day2">
+    <span class="when">Day2 ／ 9月1日(火)</span>
+    <h4>要件定義・プロジェクト管理</h4>
+    <ul>
+      <li><strong>要求</strong>(何に困っているか)・<strong>要件</strong>(何ができるべきか)・<strong>仕様</strong>(どう作るか)の3層を区別する</li>
+      <li>顧客の言葉の裏にある「真の要求」を掘る(ヘンリー・フォードの馬の話)</li>
+      <li>As-Is / To-Be 分析、ペルソナ、ユーザーストーリー</li>
+      <li>機能要件は「〜できること」の形で書く。非機能要件はIPAの6大特性</li>
+      <li>QCDS(品質・コスト・納期・スコープ)のトレードオフ</li>
+      <li>WBSでタスクを分解、MECE、3点見積もり、クリティカルパス</li>
+    </ul>
+    <div class="card" style="margin-top:10px">
+      <strong>作品への反映</strong>
+      <p style="margin:6px 0 0">ペルソナ「佐藤美咲さん(23歳・家電量販店のサポート1年目)」を設定。機能要件をFR1〜FR7で整理し、必須5つと後回し2つに分けた。一人開発のため<strong>全タスクがクリティカルパス上</strong>にあることを明記した。</p>
+    </div>
+  </div>
+  <div class="day done" id="day3">
+    <span class="when">Day3 ／ 9月2日(水)</span>
+    <h4>ソフトウェア設計</h4>
+    <ul>
+      <li>基本設計(外から見える動き)と詳細設計(内部の作り)の違い</li>
+      <li>UIとUXの違い。視線の流れ(Z・Fの法則)、ボタンの色分け</li>
+      <li>画面の<strong>4大状態</strong>(通常・処理中・成功・異常)を設計する</li>
+      <li>RESTの原則。URLは名詞にする。HTTPメソッドとステータスコード</li>
+      <li>エラー形式の統一(Problem Details / RFC 7807)</li>
+      <li>データベース設計(ER図・正規化)</li>
+      <li>設計書もGitで管理する(Docs as Code)</li>
+    </ul>
+    <div class="card" style="margin-top:10px">
+      <strong>作品への反映</strong>
+      <p style="margin:6px 0 0">APIの名前を動詞から名詞へ変更(<code>/api/start</code> → <code>/api/conversations</code>)。4大状態を実装し、<strong>異常時に入力を消さない</strong>設計にした。データベースは「使わない理由」を書いて意識的に見送った。</p>
+    </div>
+  </div>
+  <div class="day done" id="day4">
+    <span class="when">Day4 ／ 9月3日(木)</span>
+    <h4>開発・クリーンコード・バージョン管理</h4>
+    <ul>
+      <li>コードは書く時間より<strong>読まれる時間</strong>のほうが長い</li>
+      <li>意図が伝わる命名。単位を名前に含める(<code>delayMs</code>)。真偽値は <code>is</code> <code>has</code> で始める</li>
+      <li>関数は10〜20行。ガード節で入れ子を浅くする</li>
+      <li>コメントは What ではなく <strong>Why</strong> を書く</li>
+      <li>DRY(繰り返さない)・KISS(簡単に)・YAGNI(今要るものだけ)</li>
+      <li>AIの出力を理解せずコピペしない。最終責任は自分にある</li>
+      <li>Gitの4領域、ブランチとPull Request、コンフリクトの解消</li>
+      <li>コミットメッセージの接頭辞(<code>feat:</code> <code>fix:</code> <code>docs:</code>)</li>
+    </ul>
+    <div class="card" style="margin-top:10px">
+      <strong>作品への反映</strong>
+      <p style="margin:6px 0 0"><code>main</code> に直接コミットせず、ブランチを切ってPull Requestでマージする運用に変更。コミットメッセージに接頭辞を付けた。<code>__pycache__</code> を <code>.gitignore</code> に追加。</p>
+    </div>
+  </div>
+  <div class="day" id="day5">
+    <span class="when">Day5以降 ／ 9月4日(金)〜</span>
+    <h4>これから</h4>
+    <ul>
+      <li>資料が届き次第、ここに追記します</li>
+      <li>9月11日(金)が成果発表の予定</li>
+    </ul>
+  </div>
+</section>
+
+<section id="run">
+  <h2>アプリの起動方法</h2>
+  <p class="lead">3つ打つだけです。</p>
+  <pre>cd /Users/hayato/source/mu-psd15
+.venv/bin/python app.py</pre>
+  <p>起動したらブラウザで <code>http://localhost:5001</code> を開きます。止めるときはターミナルで <strong>Ctrl + C</strong> を押します。</p>
+  <div class="card">
+    <strong>初めて動かすとき、または他のパソコンで動かすとき</strong>
+    <pre style="margin:10px 0 0">python3 -m venv .venv                    <span style="color:#6B7688">ライブラリ置き場を作る</span>
+.venv/bin/pip install -r requirements.txt <span style="color:#6B7688">必要な部品を入れる</span>
+ollama pull gemma2:9b                     <span style="color:#6B7688">AIをダウンロード(5.4GB)</span></pre>
+  </div>
+  <h3>うまくいかないとき</h3>
+  <table>
+    <tr><th>症状</th><th>原因と対処</th></tr>
+    <tr><td>ポート5001が使用中</td><td>前のサーバーが残っている。<code>lsof -tiTCP:5001 | xargs kill</code></td></tr>
+    <tr><td>返事が20秒以上かかる</td><td>AIがメモリから外れている。サーバーを再起動すると温め直される</td></tr>
+    <tr><td>「サーバーにつながりません」</td><td><code>python app.py</code> が動いていない</td></tr>
+  </table>
+</section>
+
+<section id="git">
+  <h2>Gitの使い方</h2>
+  <p class="lead">この授業で使う操作だけに絞っています。</p>
+  <h3>いつもの流れ</h3>
+  <pre>git switch -c feature/やること名   <span style="color:#6B7688">1. 作業用の枝を作る</span>
+<span style="color:#6B7688">   … ファイルを編集する …</span>
+git add .                          <span style="color:#6B7688">2. 変更をまとめる</span>
+git commit -m "feat: 何をしたか"    <span style="color:#6B7688">3. 記録する</span>
+git push -u origin feature/やること名  <span style="color:#6B7688">4. GitHubへ送る</span>
+gh pr create                       <span style="color:#6B7688">5. 合流を申請する</span></pre>
+  <h3>コミットメッセージの接頭辞</h3>
+  <table>
+    <tr><th>接頭辞</th><th>使うとき</th></tr>
+    <tr><td><code>feat:</code></td><td>新しい機能を足した</td></tr>
+    <tr><td><code>fix:</code></td><td>不具合を直した</td></tr>
+    <tr><td><code>docs:</code></td><td>書類だけを変えた</td></tr>
+    <tr><td><code>refactor:</code></td><td>動きは変えずコードを整理した</td></tr>
+  </table>
+  <h3>気をつけること</h3>
+  <div class="card">
+    <p style="margin:0 0 10px"><strong>このリポジトリは公開されています。</strong>受講者全員から見えるので、送る前に必ず内容を確認してください。</p>
+    <p style="margin:0"><strong>学校アカウントを使います。</strong>個人アカウントに切り替わっていることがあるため、送る前に確認します。</p>
+    <pre style="margin:10px 0 0">gh auth status                    <span style="color:#6B7688">どのアカウントか確認</span>
+gh auth switch --user 423834      <span style="color:#6B7688">学校アカウントに切り替え</span></pre>
+  </div>
+  <h3>困ったとき</h3>
+  <table>
+    <tr><th>症状</th><th>対処</th></tr>
+    <tr><td>間違えてコミットした(送る前)</td><td><code>git reset --soft HEAD~1</code></td></tr>
+    <tr><td>変更を全部やめたい</td><td><code>git restore ファイル名</code></td></tr>
+    <tr><td>いまの状態を知りたい</td><td><code>git status</code></td></tr>
+    <tr><td>履歴を見たい</td><td><code>git log --oneline</code></td></tr>
+  </table>
+</section>
+
+</main>
+</div>
+
+<script>
+// 読んでいる位置に応じて、左のメニューを光らせる
+const links = [...document.querySelectorAll('nav a')];
+const targets = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+const mark = () => {
+  let current = targets[0];
+  for (const t of targets) if (t.getBoundingClientRect().top <= 90) current = t;
+  links.forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + current.id));
+};
+document.addEventListener('scroll', mark, { passive: true });
+mark();
+</script>
+</body>
+</html>
