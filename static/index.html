@@ -1,352 +1,410 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>クレトレ - クレーム対応トレーニング</title>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css">
-    <style>
-        body { background-color: #f5f6f8; }
-        .app-container { max-width: 720px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>クレトレ｜クレーム対応トレーニング</title>
+<script src="/static/vendor/vue.global.prod.js"></script>
+<style>
+:root {
+  --ink:    #101828;
+  --panel:  #18202F;
+  --line:   #2A3446;
+  --mist:   #93A1B8;
+  --paper:  #EEF2F7;
+  --ember:  #E0552F;
+  --amber:  #DE9A2E;
+  --jade:   #2E9E74;
 
-        /* 怒りメーター: 数値の変化に気づけるよう 0.5 秒かけて動かす */
-        .anger-bar-fill {
-            height: 100%;
-            border-radius: 6px;
-            transition: width 0.5s ease, background-color 0.5s ease;
-        }
-        .anger-bar-track {
-            height: 20px;
-            background-color: #e3e5e8;
-            border-radius: 6px;
-            overflow: hidden;
-        }
-        .anger-calm    { background-color: #2e9e5b; }
-        .anger-upset   { background-color: #d9a406; }
-        .anger-furious { background-color: #d1373a; }
+  --gothic: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", system-ui, sans-serif;
+  --mincho: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+  --mono:   ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 
-        .chat-log { min-height: 260px; max-height: 420px; overflow-y: auto; }
-        .bubble { max-width: 78%; padding: 10px 14px; border-radius: 14px; white-space: pre-wrap; }
-        .bubble-customer { background-color: #ffffff; border: 1px solid #dcdfe3; }
-        .bubble-staff { background-color: #0d6efd; color: #ffffff; }
-        .speaker-name { font-size: 0.78rem; color: #6c757d; margin-bottom: 2px; }
+* { box-sizing: border-box; }
 
-        .star-filled { color: #f0a500; }
-        .star-empty { color: #d0d3d7; }
-    </style>
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--gothic);
+  font-size: 15px;
+  line-height: 1.7;
+  /* 怒りの熱が上から差し込む。怒りが下がると冷めていく */
+  background-image: radial-gradient(120% 70% at 50% -10%, var(--heat, transparent) 0%, transparent 70%);
+  transition: background-image 700ms ease;
+}
+
+.shell { max-width: 660px; margin: 0 auto; padding: 28px 20px 56px; }
+
+/* ---- 見出し ---- */
+.wordmark { font-family: var(--mincho); font-size: 30px; letter-spacing: .18em; margin: 0; }
+.tagline { color: var(--mist); font-size: 13px; margin: 6px 0 0; }
+.eyebrow {
+  font-family: var(--mono); font-size: 11px; letter-spacing: .18em;
+  color: var(--mist); text-transform: uppercase; margin: 0 0 10px;
+}
+
+/* ---- 面 ---- */
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 20px; }
+.rule { height: 1px; background: var(--line); border: 0; margin: 22px 0; }
+
+/* ---- 事例カード ---- */
+.case-list { display: grid; gap: 10px; margin: 0; padding: 0; border: 0; }
+.case {
+  display: block; cursor: pointer; padding: 14px 16px;
+  border: 1px solid var(--line); border-radius: 4px; background: transparent;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.case:hover { border-color: var(--mist); }
+.case:has(input:checked) { border-color: var(--ember); background: #1D2537; }
+.case input { position: absolute; opacity: 0; }
+.case-name { font-weight: 600; }
+.case-voice { color: var(--mist); font-size: 13px; margin-top: 4px; }
+.case input:focus-visible + .case-name { outline: 2px solid var(--paper); outline-offset: 3px; }
+
+/* ---- 難易度 ---- */
+.levels { display: flex; gap: 8px; border: 0; padding: 0; margin: 0; }
+.level { flex: 1; text-align: center; cursor: pointer; padding: 9px 4px;
+  border: 1px solid var(--line); border-radius: 4px; font-size: 13px; }
+.level:has(input:checked) { border-color: var(--paper); background: #1D2537; }
+.level input { position: absolute; opacity: 0; }
+.level-anger { display: block; font-family: var(--mono); font-size: 11px; color: var(--mist); }
+
+/* ---- 観察窓(計器) ---- */
+.console { display: flex; gap: 18px; align-items: center; }
+.face { width: 84px; height: 84px; flex: none; }
+.gauge { flex: 1; min-width: 0; }
+.gauge-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.gauge-value { font-family: var(--mono); font-size: 26px; line-height: 1; }
+.gauge-meta { font-family: var(--mono); font-size: 11px; color: var(--mist); }
+.track { position: relative; height: 8px; background: #0B111D; border-radius: 2px; margin-top: 10px; overflow: hidden; }
+.fill { height: 100%; border-radius: 2px; transition: width 600ms ease, background-color 600ms ease; }
+.goal { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--mist); }
+.goal-note { font-family: var(--mono); font-size: 10px; color: var(--mist); margin-top: 6px; display: block; }
+
+/* ---- 会話 ---- */
+.log { display: flex; flex-direction: column; gap: 16px; max-height: 46vh; overflow-y: auto; padding-right: 4px; }
+.turn-label { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--mist); margin-bottom: 5px; }
+.said { max-width: 84%; padding: 12px 15px; border-radius: 4px; white-space: pre-wrap; }
+.said-customer { background: #1E2637; border-left: 2px solid var(--ember); }
+.said-staff { background: var(--paper); color: var(--ink); margin-left: auto; border-right: 2px solid var(--jade); }
+.said-staff .turn-label, .from-staff .turn-label { text-align: right; }
+.thinking { color: var(--mist); font-size: 13px; font-style: italic; }
+
+/* ---- 入力 ---- */
+.compose { display: flex; gap: 10px; margin-top: 18px; align-items: flex-end; }
+textarea {
+  flex: 1; resize: vertical; min-height: 64px; padding: 12px 14px;
+  background: #0B111D; color: var(--paper); border: 1px solid var(--line);
+  border-radius: 4px; font-family: inherit; font-size: 15px; line-height: 1.6;
+}
+textarea:focus-visible { outline: 2px solid var(--paper); outline-offset: 1px; }
+
+/* ---- ボタン ---- */
+button { font-family: inherit; font-size: 14px; cursor: pointer; border-radius: 4px; }
+.btn-main {
+  background: var(--paper); color: var(--ink); border: 1px solid var(--paper);
+  padding: 12px 22px; font-weight: 600;
+}
+.btn-main:disabled { background: transparent; color: var(--mist); border-color: var(--line); cursor: not-allowed; }
+.btn-quiet { background: transparent; color: var(--mist); border: 1px solid var(--line); padding: 7px 14px; font-size: 12px; }
+.btn-quiet:hover { color: var(--paper); border-color: var(--mist); }
+button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+
+/* ---- 異常時 ---- */
+.trouble { border: 1px solid var(--ember); border-left-width: 3px; border-radius: 4px; padding: 12px 14px; margin-top: 14px; }
+.trouble p { margin: 0 0 10px; font-size: 14px; }
+
+/* ---- 結果 ---- */
+.verdict { font-family: var(--mincho); font-size: 26px; margin: 0 0 4px; }
+.slip { background: var(--paper); color: var(--ink); border-radius: 4px; padding: 22px; }
+.score-row { display: grid; grid-template-columns: 8.5rem 1fr 2rem; align-items: center; gap: 12px; margin-bottom: 10px; }
+.segs { display: flex; gap: 3px; }
+.seg { height: 7px; flex: 1; background: #D5DCE6; border-radius: 1px; }
+.seg-on { background: var(--ink); }
+.score-num { font-family: var(--mono); font-size: 13px; text-align: right; }
+.slip-note { border-top: 1px solid #D5DCE6; margin-top: 16px; padding-top: 14px; font-size: 14px; }
+
+.head-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+.case-tag { font-family: var(--mono); font-size: 11px; color: var(--mist); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, body { transition: none !important; }
+}
+</style>
 </head>
 <body>
-<div id="app" class="app-container mx-auto py-4 px-3">
+<div id="app" class="shell">
 
-    <!-- 準備の場面 -->
-    <section v-if="screen === 'setup'">
-        <h1 class="h3 mb-1">クレトレ</h1>
-        <p class="text-muted">怒らせても大丈夫。何度でも失敗できる、クレーム対応の練習場。</p>
+<!-- 準備 -->
+<section v-if="screen === 'setup'">
+  <h1 class="wordmark">クレトレ</h1>
+  <p class="tagline">怒らせても、誰にも迷惑がかからない。何度でも失敗できる練習場。</p>
+  <hr class="rule">
 
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <fieldset class="mb-4">
-                    <legend class="h6">どんな場面で練習しますか？</legend>
-                    <div v-for="option in scenarioOptions" :key="option.value" class="form-check">
-                        <input class="form-check-input" type="radio" :id="'sc-' + option.value"
-                               :value="option.value" v-model="selectedScenario">
-                        <label class="form-check-label" :for="'sc-' + option.value">
-                            {{ option.label }}
-                            <span class="text-muted small">— {{ option.description }}</span>
-                        </label>
-                    </div>
-                </fieldset>
+  <p class="eyebrow">対応する事例</p>
+  <fieldset class="case-list">
+    <label class="case" v-for="c in cases" :key="c.value">
+      <input type="radio" :value="c.value" v-model="selectedCase">
+      <span class="case-name">{{ c.name }}</span>
+      <span class="case-voice">「{{ c.voice }}」</span>
+    </label>
+  </fieldset>
 
-                <fieldset class="mb-4">
-                    <legend class="h6">お客さんの手ごわさ</legend>
-                    <div v-for="option in difficultyOptions" :key="option.value" class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" :id="'df-' + option.value"
-                               :value="option.value" v-model="selectedDifficulty">
-                        <label class="form-check-label" :for="'df-' + option.value">{{ option.label }}</label>
-                    </div>
-                </fieldset>
+  <p class="eyebrow" style="margin-top:22px">相手の手ごわさ</p>
+  <fieldset class="levels">
+    <label class="level" v-for="l in levels" :key="l.value">
+      <input type="radio" :value="l.value" v-model="selectedLevel">
+      {{ l.name }}
+      <span class="level-anger">怒り {{ l.anger }} から</span>
+    </label>
+  </fieldset>
 
-                <div v-if="errorMessage" class="alert alert-danger" role="alert">{{ errorMessage }}</div>
+  <div v-if="trouble" class="trouble">
+    <p>{{ trouble }}</p>
+    <button class="btn-quiet" @click="startCase">もう一度試す</button>
+  </div>
 
-                <div class="text-end">
-                    <button class="btn btn-primary px-4" :disabled="isLoading" @click="startConversation">
-                        <span v-if="isLoading" class="spinner-border spinner-border-sm me-1"></span>
-                        {{ isLoading ? '準備しています…' : '練習を始める' }}
-                    </button>
-                </div>
-            </div>
-        </div>
-    </section>
+  <div style="text-align:right; margin-top:24px">
+    <button class="btn-main" :disabled="busy" @click="startCase">
+      {{ busy ? '準備しています…' : '対応を始める' }}
+    </button>
+  </div>
+</section>
 
-    <!-- 会話の場面 -->
-    <section v-if="screen === 'conversation'">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-            <h1 class="h4 mb-0">クレトレ</h1>
-            <button class="btn btn-outline-secondary btn-sm" @click="finishConversation('escalated')">やめる</button>
-        </div>
+<!-- 会話 -->
+<section v-if="screen === 'talking'">
+  <div class="head-row">
+    <h1 class="wordmark" style="font-size:22px">クレトレ</h1>
+    <span class="case-tag">{{ currentCaseName }} ／ {{ currentLevelName }}</span>
+    <button class="btn-quiet" @click="closeCase('escalated')">中断する</button>
+  </div>
 
-        <div class="card shadow-sm mb-3">
-            <div class="card-body py-2">
-                <div class="d-flex align-items-center gap-3">
-                    <span class="small text-muted text-nowrap">怒りレベル</span>
-                    <div class="anger-bar-track flex-grow-1">
-                        <div class="anger-bar-fill" :class="angerColorClass" :style="{ width: anger + '%' }"></div>
-                    </div>
-                    <strong class="text-nowrap" style="width: 3rem; text-align: right;">{{ anger }}</strong>
-                </div>
-                <div class="small text-muted mt-1">やり取り {{ turn }} / {{ maxTurns }} 回</div>
-            </div>
-        </div>
+  <div class="panel console">
+    <svg class="face" viewBox="0 0 100 100" role="img" :aria-label="'お客さんの怒りは100点中' + anger + '点'">
+      <circle cx="50" cy="50" r="40" fill="none" :stroke="angerColor" :stroke-width="1"
+              :opacity="anger / 260" style="transition:opacity 600ms ease"/>
+      <circle cx="50" cy="50" r="33" fill="#0B111D" :stroke="angerColor" stroke-width="1.5"
+              style="transition:stroke 600ms ease"/>
+      <ellipse cx="39" cy="47" :rx="3.4" :ry="eyeHeight" :fill="angerColor" style="transition:all 600ms ease"/>
+      <ellipse cx="61" cy="47" :rx="3.4" :ry="eyeHeight" :fill="angerColor" style="transition:all 600ms ease"/>
+      <line x1="31" :y1="browOuter" x2="45" :y2="browInner" :stroke="angerColor" stroke-width="2.4"
+            stroke-linecap="round" style="transition:all 600ms ease"/>
+      <line x1="69" :y1="browOuter" x2="55" :y2="browInner" :stroke="angerColor" stroke-width="2.4"
+            stroke-linecap="round" style="transition:all 600ms ease"/>
+      <path :d="mouthPath" fill="none" :stroke="angerColor" stroke-width="2.6" stroke-linecap="round"
+            style="transition:all 600ms ease"/>
+    </svg>
 
-        <div class="card shadow-sm mb-3">
-            <div class="card-body chat-log" ref="chatLog">
-                <div v-for="(message, index) in messages" :key="index" class="mb-3">
-                    <div v-if="message.role === 'customer'">
-                        <div class="speaker-name">お客さん</div>
-                        <div class="bubble bubble-customer d-inline-block">{{ message.text }}</div>
-                    </div>
-                    <div v-else class="text-end">
-                        <div class="speaker-name">あなた</div>
-                        <div class="bubble bubble-staff d-inline-block text-start">{{ message.text }}</div>
-                    </div>
-                </div>
+    <div class="gauge">
+      <div class="gauge-head">
+        <span class="eyebrow" style="margin:0">怒りの強さ</span>
+        <span class="gauge-value" :style="{ color: angerColor }">{{ anger }}</span>
+      </div>
+      <div class="track">
+        <div class="fill" :style="{ width: anger + '%', backgroundColor: angerColor }"></div>
+        <div class="goal" :style="{ left: goalAnger + '%' }"></div>
+      </div>
+      <span class="goal-note">目標 {{ goalAnger }} 以下 ／ やり取り {{ turn }} / {{ maxTurns }} 回</span>
+    </div>
+  </div>
 
-                <div v-if="isLoading" class="text-muted small fst-italic">お客さんが考えています…</div>
+  <hr class="rule">
 
-                <div v-if="errorMessage" class="alert alert-danger py-2 mb-0 mt-2" role="alert">
-                    <div>{{ errorMessage }}</div>
-                    <button class="btn btn-sm btn-outline-danger mt-2" @click="sendReply">もう一度送る</button>
-                </div>
-            </div>
-        </div>
+  <div class="log" ref="log" aria-live="polite">
+    <div v-for="(m, i) in messages" :key="i" :class="m.role === 'staff' ? 'from-staff' : ''">
+      <div class="turn-label">{{ m.role === 'staff' ? 'あなた' : 'お客さん' }}</div>
+      <div class="said" :class="m.role === 'staff' ? 'said-staff' : 'said-customer'">{{ m.text }}</div>
+    </div>
+    <p v-if="busy" class="thinking">お客さんが考えています…</p>
+  </div>
 
-        <div class="input-group">
-            <!-- macOS では Command、Windows では Ctrl が使われるため両方を受け付ける -->
-            <textarea class="form-control" rows="2" placeholder="返事を入力…(Ctrl または ⌘ + Enter で送信)"
-                      v-model="replyText" :disabled="isLoading"
-                      @keydown.ctrl.enter="sendReply" @keydown.meta.enter="sendReply"></textarea>
-            <button class="btn btn-primary px-4" :disabled="!canSend" @click="sendReply">
-                <span v-if="isLoading" class="spinner-border spinner-border-sm"></span>
-                <span v-else>送信</span>
-            </button>
-        </div>
-    </section>
+  <div v-if="trouble" class="trouble">
+    <p>{{ trouble }}</p>
+    <button class="btn-quiet" @click="send">もう一度送る</button>
+  </div>
 
-    <!-- 結果の場面 -->
-    <section v-if="screen === 'result'">
-        <div class="text-center mb-4">
-            <h1 class="h4" :class="isResolved ? 'text-success' : 'text-danger'">
-                {{ isResolved ? 'お客さんを落ち着かせました' : 'お客さんを怒らせてしまいました' }}
-            </h1>
-            <p class="text-muted mb-0">最終の怒りレベル {{ anger }} ／ やり取り {{ turn }} 回</p>
-        </div>
+  <div class="compose">
+    <textarea v-model="draft" :disabled="busy" placeholder="お客さんへの返答を入力"
+              @keydown.ctrl.enter="send" @keydown.meta.enter="send"></textarea>
+    <button class="btn-main" :disabled="!canSend" @click="send">返答する</button>
+  </div>
+</section>
 
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <h2 class="h6 mb-3">講評</h2>
+<!-- 結果 -->
+<section v-if="screen === 'closed'">
+  <p class="eyebrow">対応の結果</p>
+  <h1 class="verdict" :style="{ color: resolved ? 'var(--jade)' : 'var(--ember)' }">
+    {{ resolved ? '落ち着いてもらえました' : '怒らせたまま終わりました' }}
+  </h1>
+  <p class="gauge-meta">最終の怒り {{ anger }} ／ やり取り {{ turn }} 回 ／ {{ currentCaseName }}</p>
+  <hr class="rule">
 
-                <div v-if="isLoading" class="text-muted">
-                    <span class="spinner-border spinner-border-sm me-2"></span>講評を作成しています…
-                </div>
+  <p v-if="busy" class="thinking">講評をまとめています…</p>
 
-                <div v-else-if="errorMessage" class="alert alert-danger" role="alert">
-                    <div>{{ errorMessage }}</div>
-                    <button class="btn btn-sm btn-outline-danger mt-2" @click="requestReview">もう一度取得する</button>
-                </div>
+  <div v-else-if="trouble" class="trouble">
+    <p>{{ trouble }}</p>
+    <button class="btn-quiet" @click="askReview">もう一度取得する</button>
+  </div>
 
-                <div v-else-if="review">
-                    <div v-for="item in scoreItems" :key="item.key" class="d-flex align-items-center mb-2">
-                        <span style="width: 9rem;">{{ item.label }}</span>
-                        <span aria-hidden="true">
-                            <span v-for="n in 5" :key="n" :class="n <= review.scores[item.key] ? 'star-filled' : 'star-empty'">★</span>
-                        </span>
-                        <span class="visually-hidden">5点中{{ review.scores[item.key] }}点</span>
-                    </div>
-                    <hr>
-                    <p class="mb-0" style="white-space: pre-wrap;">{{ review.comment }}</p>
-                </div>
-            </div>
-        </div>
+  <div v-else-if="review" class="slip">
+    <p class="eyebrow" style="color:#5A6678">講評</p>
+    <div class="score-row" v-for="s in scoreRows" :key="s.key">
+      <span>{{ s.label }}</span>
+      <span class="segs">
+        <span class="seg" v-for="n in 5" :key="n" :class="{ 'seg-on': n <= review.scores[s.key] }"></span>
+      </span>
+      <span class="score-num">{{ review.scores[s.key] }}/5</span>
+    </div>
+    <p class="slip-note">{{ review.comment }}</p>
+  </div>
 
-        <div class="text-end">
-            <button class="btn btn-primary px-4" @click="backToSetup">もう一度</button>
-        </div>
-    </section>
+  <div style="text-align:right; margin-top:24px">
+    <button class="btn-main" @click="reset">別の事例で練習する</button>
+  </div>
+</section>
+
 </div>
 
 <script>
 const { createApp } = Vue;
 
-const MAX_TURNS = 10;
-const CALM_ANGER = 30;
-const UPSET_ANGER = 70;
-
 createApp({
-    data() {
-        return {
-            screen: 'setup',
-            isLoading: false,
-            errorMessage: '',
-
-            scenarioOptions: [
-                { value: 'product_defect', label: '商品の不具合', description: '買った商品が壊れていた' },
-                { value: 'delivery_delay', label: '納期の遅れ', description: '約束の日に届かなかった' },
-                { value: 'staff_attitude', label: '店員の態度', description: '接客態度に腹を立てている' },
-            ],
-            difficultyOptions: [
-                { value: 'easy', label: 'やさしめ' },
-                { value: 'normal', label: 'ふつう' },
-                { value: 'hard', label: 'きびしめ' },
-            ],
-            scoreItems: [
-                { key: 'listening', label: '話を聞けたか' },
-                { key: 'apology', label: '謝り方' },
-                { key: 'solution', label: '解決策を出せたか' },
-            ],
-
-            selectedScenario: 'product_defect',
-            selectedDifficulty: 'normal',
-
-            anger: 0,
-            turn: 0,
-            status: 'continue',
-            messages: [],
-            replyText: '',
-            review: null,
-            maxTurns: MAX_TURNS,
-        };
+  data() {
+    return {
+      screen: 'setup', busy: false, trouble: '',
+      cases: [
+        { value: 'product_defect', name: '商品の不具合',
+          voice: '買ったばかりなのに、もう壊れてるんだけど！' },
+        { value: 'delivery_delay', name: '納期の遅れ',
+          voice: '今日届くはずでしょ？予定があったのに。' },
+        { value: 'staff_attitude', name: '店員の態度',
+          voice: 'さっきの店員の態度、あれはないでしょう。' },
+      ],
+      levels: [
+        { value: 'easy', name: 'やさしめ', anger: 60 },
+        { value: 'normal', name: 'ふつう', anger: 80 },
+        { value: 'hard', name: 'きびしめ', anger: 95 },
+      ],
+      scoreRows: [
+        { key: 'listening', label: '話を聞けたか' },
+        { key: 'apology', label: '謝り方' },
+        { key: 'solution', label: '解決策を出せたか' },
+      ],
+      selectedCase: 'product_defect',
+      selectedLevel: 'normal',
+      anger: 0, turn: 0, status: 'continue',
+      messages: [], draft: '', review: null,
+      goalAnger: 15, maxTurns: 12,
+    };
+  },
+  computed: {
+    canSend() { return !this.busy && this.draft.trim().length > 0; },
+    resolved() { return this.status === 'resolved'; },
+    currentCaseName() { return this.cases.find(c => c.value === this.selectedCase).name; },
+    currentLevelName() { return this.levels.find(l => l.value === this.selectedLevel).name; },
+    angerColor() {
+      if (this.anger <= 30) return 'var(--jade)';
+      if (this.anger <= 70) return 'var(--amber)';
+      return 'var(--ember)';
     },
-    computed: {
-        canSend() {
-            return !this.isLoading && this.replyText.trim().length > 0;
-        },
-        angerColorClass() {
-            if (this.anger <= CALM_ANGER) return 'anger-calm';
-            if (this.anger <= UPSET_ANGER) return 'anger-upset';
-            return 'anger-furious';
-        },
-        isResolved() {
-            return this.status === 'resolved';
-        },
+    /** 画面上部に差し込む熱。怒りが下がるほど薄くなる */
+    heatTint() {
+      if (this.screen !== 'talking') return 'transparent';
+      const strength = (this.anger / 100 * 0.20).toFixed(3);
+      const hue = this.anger <= 30 ? '46,158,116' : this.anger <= 70 ? '222,154,46' : '224,85,47';
+      return `rgba(${hue}, ${strength})`;
     },
-    methods: {
-        /** APIを呼び出す。失敗時は Problem Details の detail を例外メッセージにする。 */
-        async postJson(path, payload) {
-            let response;
-            try {
-                response = await fetch(path, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                });
-            } catch {
-                // サーバーに届かなかった場合はブラウザが英語の例外を投げるため、日本語に置き換える
-                throw new Error('サーバーに接続できませんでした。起動しているか確認してください。');
-            }
-
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                throw new Error(data.detail || '通信に失敗しました。しばらく待って、もう一度お試しください。');
-            }
-            return data;
-        },
-
-        async startConversation() {
-            this.isLoading = true;
-            this.errorMessage = '';
-            try {
-                const data = await this.postJson('/api/conversations', {
-                    scenario: this.selectedScenario,
-                    difficulty: this.selectedDifficulty,
-                });
-                this.anger = data.anger;
-                this.turn = data.turn;
-                this.status = data.status;
-                this.messages = [{ role: 'customer', text: data.message }];
-                this.replyText = '';
-                this.review = null;
-                this.screen = 'conversation';
-            } catch (error) {
-                this.errorMessage = error.message;
-            } finally {
-                this.isLoading = false;
-            }
-        },
-
-        async sendReply() {
-            if (!this.canSend) return;
-
-            const reply = this.replyText.trim();
-            this.isLoading = true;
-            this.errorMessage = '';
-            try {
-                const data = await this.postJson('/api/turns', {
-                    scenario: this.selectedScenario,
-                    difficulty: this.selectedDifficulty,
-                    anger: this.anger,
-                    turn: this.turn,
-                    messages: this.messages,
-                    reply: reply,
-                });
-
-                // 送信が成功してから履歴に積む。失敗時に入力欄を空にしないための順序。
-                this.messages.push({ role: 'staff', text: reply });
-                this.messages.push({ role: 'customer', text: data.message });
-                this.replyText = '';
-
-                this.anger = data.anger;
-                this.turn = data.turn;
-                this.status = data.status;
-                this.scrollChatToBottom();
-
-                if (data.status !== 'continue') {
-                    this.finishConversation(data.status);
-                }
-            } catch (error) {
-                this.errorMessage = error.message;
-            } finally {
-                this.isLoading = false;
-            }
-        },
-
-        finishConversation(status) {
-            this.status = status;
-            this.screen = 'result';
-            this.errorMessage = '';
-            this.requestReview();
-        },
-
-        async requestReview() {
-            this.isLoading = true;
-            this.errorMessage = '';
-            try {
-                this.review = await this.postJson('/api/reviews', {
-                    scenario: this.selectedScenario,
-                    messages: this.messages,
-                    result: this.status,
-                });
-            } catch (error) {
-                this.errorMessage = error.message;
-            } finally {
-                this.isLoading = false;
-            }
-        },
-
-        backToSetup() {
-            this.screen = 'setup';
-            this.errorMessage = '';
-            this.review = null;
-            this.messages = [];
-        },
-
-        scrollChatToBottom() {
-            this.$nextTick(() => {
-                const log = this.$refs.chatLog;
-                if (log) log.scrollTop = log.scrollHeight;
-            });
-        },
+    eyeHeight() { return (3.4 - this.anger * 0.012).toFixed(2); },
+    browOuter() { return (36 - this.anger * 0.04).toFixed(1); },
+    browInner() { return (36 + this.anger * 0.08).toFixed(1); },
+    mouthPath() {
+      const control = (78 - this.anger * 0.22).toFixed(1);
+      return `M 36 68 Q 50 ${control} 64 68`;
     },
+  },
+  watch: {
+    // body は Vue の管理範囲外なので、CSS変数を直接書き換えて背景の熱を反映する
+    heatTint: {
+      immediate: true,
+      handler(tint) { document.body.style.setProperty('--heat', tint); },
+    },
+  },
+  methods: {
+    async ask(path, body) {
+      let res;
+      try {
+        res = await fetch(path, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } catch {
+        // サーバーに届かない場合はブラウザが英語の例外を返すため、日本語に置き換える
+        throw new Error('サーバーにつながりません。python app.py が動いているか確認してください。');
+      }
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || '通信に失敗しました。少し待って、もう一度試してください。');
+      return data;
+    },
+
+    async startCase() {
+      this.busy = true; this.trouble = '';
+      try {
+        const d = await this.ask('/api/conversations',
+          { scenario: this.selectedCase, difficulty: this.selectedLevel });
+        Object.assign(this, {
+          anger: d.anger, turn: d.turn, status: d.status,
+          messages: [{ role: 'customer', text: d.message }],
+          draft: '', review: null, screen: 'talking',
+        });
+      } catch (e) { this.trouble = e.message; } finally { this.busy = false; }
+    },
+
+    async send() {
+      if (!this.canSend) return;
+      const reply = this.draft.trim();
+      this.busy = true; this.trouble = '';
+      try {
+        const d = await this.ask('/api/turns', {
+          scenario: this.selectedCase, difficulty: this.selectedLevel,
+          anger: this.anger, turn: this.turn, messages: this.messages, reply,
+        });
+        // 送信が成功してから履歴に積む。失敗しても入力を消さないための順序
+        this.messages.push({ role: 'staff', text: reply });
+        this.messages.push({ role: 'customer', text: d.message });
+        this.draft = '';
+        Object.assign(this, { anger: d.anger, turn: d.turn, status: d.status });
+        this.scrollDown();
+        if (d.status !== 'continue') this.closeCase(d.status);
+      } catch (e) { this.trouble = e.message; } finally { this.busy = false; }
+    },
+
+    closeCase(status) {
+      this.status = status; this.screen = 'closed'; this.trouble = '';
+      this.askReview();
+    },
+
+    async askReview() {
+      this.busy = true; this.trouble = '';
+      try {
+        this.review = await this.ask('/api/reviews',
+          { scenario: this.selectedCase, messages: this.messages, result: this.status });
+      } catch (e) { this.trouble = e.message; } finally { this.busy = false; }
+    },
+
+    reset() {
+      Object.assign(this, { screen: 'setup', trouble: '', review: null, messages: [], anger: 0 });
+    },
+
+    scrollDown() {
+      this.$nextTick(() => {
+        const el = this.$refs.log;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    },
+  },
 }).mount('#app');
 </script>
 </body>
