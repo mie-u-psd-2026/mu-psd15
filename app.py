@@ -4,7 +4,9 @@ AIが怒っている顧客を演じ、利用者の応対に応じて怒りレベ
 サーバーは状態を持たず、会話履歴と怒りレベルはリクエストごとに受け取る。
 """
 
+import json
 import re
+import urllib.request
 
 from flask import Flask, jsonify, request, send_from_directory
 from openai import OpenAI
@@ -28,6 +30,11 @@ client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
 OLLAMA_MODEL = "gemma2:9b"
 # 既定値(0.8)では応答に英語・スペイン語が混入したため下げている
 LLM_TEMPERATURE = 0.3
+# Ollamaは既定では5分でモデルを解放する。解放後の初回は読み込みに20秒以上かかり
+# 「5秒以内」の非機能要件を満たせない。これを避けるためモデルを常駐させる。
+# keep_alive はOpenAI互換API側では無視されるため、Ollama純正APIへ直接指定する。
+OLLAMA_NATIVE_CHAT_URL = "http://localhost:11434/api/chat"
+KEEP_MODEL_RESIDENT = -1
 
 # シナリオを増やすときは、この辞書に1件追加するだけで済む
 SCENARIOS = {
@@ -51,10 +58,13 @@ SCENARIOS = {
 INITIAL_ANGER_BY_DIFFICULTY = {"easy": 60, "normal": 80, "hard": 95}
 DEFAULT_DIFFICULTY = "normal"
 
-RESOLVED_ANGER = 20
+RESOLVED_ANGER = 15
 MAX_ANGER = 100
 MIN_ANGER = 0
-MAX_TURNS = 10
+MAX_TURNS = 12
+# 1回のやり取りで怒りが動く幅の上限。AIに任せると一気に20以上動かして
+# 会話が3往復で終わってしまうため、コード側で制限して練習量を確保する。
+MAX_ANGER_DELTA = 12
 
 ANGER_PATTERN = re.compile(r"【怒り】\s*(\d+)")
 LINE_PATTERN = re.compile(r"【セリフ】\s*(.+)", re.DOTALL)
@@ -94,6 +104,13 @@ def clamp_anger(value: int) -> int:
     return max(MIN_ANGER, min(MAX_ANGER, value))
 
 
+def limit_anger_change(previous: int, requested: int) -> int:
+    """怒りの変化幅を1回あたり MAX_ANGER_DELTA までに抑える。"""
+    lower = previous - MAX_ANGER_DELTA
+    upper = previous + MAX_ANGER_DELTA
+    return clamp_anger(max(lower, min(upper, requested)))
+
+
 def build_customer_prompt(scenario_key: str, anger: int) -> str:
     """顧客役AIへの指示文を組み立てる。"""
     situation = SCENARIOS[scenario_key]["customer_situation"]
@@ -102,8 +119,18 @@ def build_customer_prompt(scenario_key: str, anger: int) -> str:
         "店員の対応を評価し、必ず次の2行の形式だけで出力してください。\n"
         "【怒り】数値(0〜100)\n"
         "【セリフ】顧客としての発言(80字以内)\n"
-        "誠実な謝罪・傾聴・具体的な解決策があれば怒りを下げ、"
-        "言い訳や責任逃れなら上げてください。\n"
+        "\n"
+        "怒りの動かし方:\n"
+        f"- 1回で大きく変えず、{MAX_ANGER_DELTA}以内で少しずつ動かす\n"
+        "- 誠実な謝罪・傾聴・具体的な解決策があれば下げる\n"
+        "- 言い訳や責任逃れ、話をそらす対応なら上げる\n"
+        "\n"
+        "セリフの作り方:\n"
+        "- 店員が答えられる要求・質問・不満を必ず1つ入れる\n"
+        "- 「ありがとう」だけで終わらせず、次に何をしてほしいかを述べる\n"
+        "- 怒りが下がっても、納得しきるまでは店員に判断を委ねない\n"
+        "- 直前の自分の発言をそのまま繰り返さず、必ず言い回しか論点を変える\n"
+        "\n"
         "顧客以外の役を演じてはいけません。日本語だけで書いてください。"
     )
 
@@ -208,7 +235,8 @@ def create_turn():
             "llm-unavailable", "Service Unavailable", 500, "AIとの通信中にエラーが発生しました。"
         )
 
-    anger, message = parse_customer_reply(raw_text, previous_anger)
+    raw_anger, message = parse_customer_reply(raw_text, previous_anger)
+    anger = limit_anger_change(previous_anger, raw_anger)
     return jsonify(
         {"anger": anger, "message": message, "turn": turn, "status": judge_status(anger, turn)}
     )
@@ -263,6 +291,34 @@ def parse_comment(raw_text: str) -> str:
     return raw_text.strip() or "講評を取得できませんでした。"
 
 
+def warm_up_model() -> None:
+    """起動時にモデルをメモリへ読み込み、以後解放されないようにする。
+
+    最初の利用者だけが20秒以上待たされる状態を避けるための準備処理。
+    AIが起動していなくてもアプリ自体は立ち上がるよう、失敗しても続行する。
+    """
+    payload = {
+        "model": OLLAMA_MODEL,
+        "stream": False,
+        "keep_alive": KEEP_MODEL_RESIDENT,
+        "messages": [{"role": "user", "content": "準備はできましたか"}],
+    }
+    request_body = json.dumps(payload).encode()
+    try:
+        urllib.request.urlopen(
+            urllib.request.Request(
+                OLLAMA_NATIVE_CHAT_URL,
+                data=request_body,
+                headers={"Content-Type": "application/json"},
+            ),
+            timeout=180,
+        ).read()
+        app.logger.info("AIモデルを読み込み、常駐させました。")
+    except Exception as error:
+        app.logger.warning(f"AIモデルの事前読み込みに失敗しました: {error}")
+
+
 if __name__ == "__main__":
+    warm_up_model()
     # macOS では AirPlay Receiver がポート 5000 を占有するため 5001 を使用
     app.run(debug=True, host="0.0.0.0", port=5001)
