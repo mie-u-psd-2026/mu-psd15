@@ -7,14 +7,15 @@
 <script src="/static/vendor/vue.global.prod.js"></script>
 <style>
 :root {
-  --ink:    #101828;
-  --panel:  #18202F;
-  --line:   #2A3446;
-  --mist:   #93A1B8;
-  --paper:  #EEF2F7;
-  --ember:  #E0552F;
-  --amber:  #DE9A2E;
-  --jade:   #2E9E74;
+  --ink:    #FBFBFD;   /* 地の色: ほぼ白 */
+  --panel:  #FFFFFF;   /* 浮いた面 */
+  --line:   #DFE3EA;   /* 罫線 */
+  --mist:   #6B7688;   /* 補助の文字 */
+  --paper:  #1B2230;   /* 主な文字色 */
+  --ember:  #C4402A;   /* 怒りが強い */
+  --amber:  #B57B12;   /* 怒りが中くらい */
+  --jade:   #1F7A56;   /* 落ち着いている */
+  --sunken: #F0F2F6;   /* へこんだ面(メーターの溝など) */
 
   --gothic: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Noto Sans JP", system-ui, sans-serif;
   --mincho: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
@@ -46,7 +47,8 @@ body {
 }
 
 /* ---- 面 ---- */
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 20px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 20px;
+  box-shadow: 0 1px 2px rgba(27,34,48,.05); }
 .rule { height: 1px; background: var(--line); border: 0; margin: 22px 0; }
 
 /* ---- 事例カード ---- */
@@ -57,7 +59,7 @@ body {
   transition: border-color 160ms ease, background 160ms ease;
 }
 .case:hover { border-color: var(--mist); }
-.case:has(input:checked) { border-color: var(--ember); background: #1D2537; }
+.case:has(input:checked) { border-color: var(--ember); background: #F4F7FB; }
 .case input { position: absolute; opacity: 0; }
 .case-name { font-weight: 600; }
 .case-voice { color: var(--mist); font-size: 13px; margin-top: 4px; }
@@ -67,7 +69,7 @@ body {
 .levels { display: flex; gap: 8px; border: 0; padding: 0; margin: 0; }
 .level { flex: 1; text-align: center; cursor: pointer; padding: 9px 4px;
   border: 1px solid var(--line); border-radius: 4px; font-size: 13px; }
-.level:has(input:checked) { border-color: var(--paper); background: #1D2537; }
+.level:has(input:checked) { border-color: var(--paper); background: #F4F7FB; }
 .level input { position: absolute; opacity: 0; }
 .level-anger { display: block; font-family: var(--mono); font-size: 11px; color: var(--mist); }
 
@@ -78,7 +80,7 @@ body {
 .gauge-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .gauge-value { font-family: var(--mono); font-size: 26px; line-height: 1; }
 .gauge-meta { font-family: var(--mono); font-size: 11px; color: var(--mist); }
-.track { position: relative; height: 8px; background: #0B111D; border-radius: 2px; margin-top: 10px; overflow: hidden; }
+.track { position: relative; height: 8px; background: var(--sunken); border-radius: 2px; margin-top: 10px; overflow: hidden; }
 .fill { height: 100%; border-radius: 2px; transition: width 600ms ease, background-color 600ms ease; }
 .goal { position: absolute; top: -3px; bottom: -3px; width: 1px; background: var(--mist); }
 .goal-note { font-family: var(--mono); font-size: 10px; color: var(--mist); margin-top: 6px; display: block; }
@@ -87,8 +89,8 @@ body {
 .log { display: flex; flex-direction: column; gap: 16px; max-height: 46vh; overflow-y: auto; padding-right: 4px; }
 .turn-label { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; color: var(--mist); margin-bottom: 5px; }
 .said { max-width: 84%; padding: 12px 15px; border-radius: 4px; white-space: pre-wrap; }
-.said-customer { background: #1E2637; border-left: 2px solid var(--ember); }
-.said-staff { background: var(--paper); color: var(--ink); margin-left: auto; border-right: 2px solid var(--jade); }
+.said-customer { background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--ember); }
+.said-staff { background: #E8EEF7; color: var(--paper); margin-left: auto; border: 1px solid #CFDBEC; border-right: 3px solid var(--jade); }
 .said-staff .turn-label, .from-staff .turn-label { text-align: right; }
 .thinking { color: var(--mist); font-size: 13px; font-style: italic; }
 
@@ -96,7 +98,7 @@ body {
 .compose { display: flex; gap: 10px; margin-top: 18px; align-items: flex-end; }
 textarea {
   flex: 1; resize: vertical; min-height: 64px; padding: 12px 14px;
-  background: #0B111D; color: var(--paper); border: 1px solid var(--line);
+  background: var(--sunken); color: var(--paper); border: 1px solid var(--line);
   border-radius: 4px; font-family: inherit; font-size: 15px; line-height: 1.6;
 }
 textarea:focus-visible { outline: 2px solid var(--paper); outline-offset: 1px; }
@@ -104,10 +106,10 @@ textarea:focus-visible { outline: 2px solid var(--paper); outline-offset: 1px; }
 /* ---- ボタン ---- */
 button { font-family: inherit; font-size: 14px; cursor: pointer; border-radius: 4px; }
 .btn-main {
-  background: var(--paper); color: var(--ink); border: 1px solid var(--paper);
+  background: var(--paper); color: #FFFFFF; border: 1px solid var(--paper);
   padding: 12px 22px; font-weight: 600;
 }
-.btn-main:disabled { background: transparent; color: var(--mist); border-color: var(--line); cursor: not-allowed; }
+.btn-main:disabled { background: var(--sunken); color: #A6AEBC; border-color: var(--line); cursor: not-allowed; }
 .btn-quiet { background: transparent; color: var(--mist); border: 1px solid var(--line); padding: 7px 14px; font-size: 12px; }
 .btn-quiet:hover { color: var(--paper); border-color: var(--mist); }
 button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
@@ -118,13 +120,13 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
 
 /* ---- 結果 ---- */
 .verdict { font-family: var(--mincho); font-size: 26px; margin: 0 0 4px; }
-.slip { background: var(--paper); color: var(--ink); border-radius: 4px; padding: 22px; }
+.slip { background: var(--panel); color: var(--paper); border: 1px solid var(--line); border-radius: 4px; padding: 22px; }
 .score-row { display: grid; grid-template-columns: 8.5rem 1fr 2rem; align-items: center; gap: 12px; margin-bottom: 10px; }
 .segs { display: flex; gap: 3px; }
-.seg { height: 7px; flex: 1; background: #D5DCE6; border-radius: 1px; }
-.seg-on { background: var(--ink); }
+.seg { height: 7px; flex: 1; background: var(--sunken); border-radius: 1px; }
+.seg-on { background: var(--paper); }
 .score-num { font-family: var(--mono); font-size: 13px; text-align: right; }
-.slip-note { border-top: 1px solid #D5DCE6; margin-top: 16px; padding-top: 14px; font-size: 14px; }
+.slip-note { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 14px; font-size: 14px; }
 
 /* ---- 振り返り ---- */
 .chart { width: 100%; height: 80px; display: block; }
@@ -140,8 +142,8 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
 .turn-text { font-size: 14px; }
 .turn-tag { display: inline-block; font-style: normal; font-family: var(--mono); font-size: 10px;
   letter-spacing: .08em; padding: 2px 7px; border-radius: 2px; margin-left: 8px; white-space: nowrap; }
-.tag-good { background: var(--jade); color: var(--ink); }
-.tag-bad { background: var(--ember); color: var(--ink); }
+.tag-good { background: var(--jade); color: #FFFFFF; }
+.tag-bad { background: var(--ember); color: #FFFFFF; }
 
 .head-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
 .case-tag { font-family: var(--mono); font-size: 11px; color: var(--mist); }
@@ -202,7 +204,7 @@ button:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
     <svg class="face" viewBox="0 0 100 100" role="img" :aria-label="'お客さんの怒りは100点中' + anger + '点'">
       <circle cx="50" cy="50" r="40" fill="none" :stroke="angerColor" :stroke-width="1"
               :opacity="anger / 260" style="transition:opacity 600ms ease"/>
-      <circle cx="50" cy="50" r="33" fill="#0B111D" :stroke="angerColor" stroke-width="1.5"
+      <circle cx="50" cy="50" r="33" fill="#FFFFFF" :stroke="angerColor" stroke-width="1.5"
               style="transition:stroke 600ms ease"/>
       <ellipse cx="39" cy="47" :rx="3.4" :ry="eyeHeight" :fill="angerColor" style="transition:all 600ms ease"/>
       <ellipse cx="61" cy="47" :rx="3.4" :ry="eyeHeight" :fill="angerColor" style="transition:all 600ms ease"/>
@@ -364,8 +366,8 @@ createApp({
     /** 画面上部に差し込む熱。怒りが下がるほど薄くなる */
     heatTint() {
       if (this.screen !== 'talking') return 'transparent';
-      const strength = (this.anger / 100 * 0.20).toFixed(3);
-      const hue = this.anger <= 30 ? '46,158,116' : this.anger <= 70 ? '222,154,46' : '224,85,47';
+      const strength = (this.anger / 100 * 0.13).toFixed(3);
+      const hue = this.anger <= 30 ? '31,122,86' : this.anger <= 70 ? '181,123,18' : '196,64,42';
       return `rgba(${hue}, ${strength})`;
     },
     eyeHeight() { return (3.4 - this.anger * 0.012).toFixed(2); },
