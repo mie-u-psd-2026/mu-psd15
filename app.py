@@ -66,7 +66,7 @@ MAX_TURNS = 12
 # 会話が3往復で終わってしまうため、コード側で制限して練習量を確保する。
 MAX_ANGER_DELTA = 12
 
-ANGER_PATTERN = re.compile(r"【怒り】\s*(\d+)")
+ANGER_PATTERN = re.compile(r"【怒り】\s*(-?\d+)")
 LINE_PATTERN = re.compile(r"【セリフ】\s*(.+)", re.DOTALL)
 SCORE_PATTERNS = {
     "listening": re.compile(r"【傾聴】\s*(\d+)"),

@@ -104,6 +104,14 @@ http://localhost:5001
 | 「サーバーにつながりません」 | `python app.py` が動いていない |
 | `ollama は認識されていません` | インストール後にターミナルを開き直すか、PCを再起動する |
 
+### テストの実行
+
+AIを起動していなくても動きます。AIへの問い合わせを固定の返事に差し替えて(モック)、判定ロジックと API を確かめます。
+
+```
+pytest
+```
+
 ## ファイル構成
 
 ```
@@ -113,6 +121,8 @@ mu-psd15/
 ├── readme.md             このファイル
 ├── design-document.md    要件定義書 + 基本設計書
 ├── test-spec.md          テスト仕様書と実施結果
+├── tests/
+│   └── test_app.py       自動テスト(pytest)。AIなしで1秒で走る
 ├── wbs.md                作業計画とスケジュール
 └── static/
     ├── index.html        画面のすべて(HTML + CSS + Vue.js)

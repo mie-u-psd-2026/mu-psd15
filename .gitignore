@@ -6,3 +6,4 @@ __pycache__/
 # 発表資料と開発ガイドは、当面リポジトリに含めない
 docs/
 guide/
+.pytest_cache/
